@@ -1,33 +1,32 @@
 class App {
-  constructor() {
+  constructor() {}
+  initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
-    const defaultView = document.querySelector(".view.active");
-    let viewComponent = null;
-    const mapViews = (viewName) => {
-      viewComponent = document.querySelector(`#${viewName}-view`);
-      const pattern = /\/[a-zA-Z-]+$/;
-      let pastView = window.location.href.match(pattern);
-      // clear mainLayout inner HTML
-
-      if (pastView) {
-        pastView = pastView[0].slice(1);
-
-        document.querySelector(`#${pastView}-view`).classList.remove("active");
-      } else {
-        defaultView.classList.remove("active");
-      }
-      viewComponent.classList.add("active");
-    };
     navItems.forEach((navItem) =>
-      navItem.addEventListener("click", function (e) {
+      navItem.addEventListener("click", (e) => {
         e.preventDefault();
-        const view = this.getAttribute("data-view");
-        mapViews(view);
+        const view = e.currentTarget.getAttribute("data-view");
+        this.mapViews(view, e.currentTarget);
         window.history.pushState({ view }, "", `/${view}`);
-        console.log("Navigation to " + view);
       }),
     );
-  }
+  };
+
+  clearActiveView = () => {
+    const navItems = document.querySelectorAll(".nav-item");
+    const viewSections = document.querySelectorAll(".view");
+    viewSections.forEach((viewSection) =>
+      viewSection.classList.remove("active"),
+    );
+    navItems.forEach((navItem) => navItem.classList.remove("active"));
+  };
+  mapViews = (viewName, clickedLinkEle) => {
+    this.clearActiveView();
+    const viewComponent = document.querySelector(`#${viewName}-view`);
+    clickedLinkEle.classList.add("active");
+    viewComponent.classList.add("active");
+  };
 }
 
 const initApp = new App();
+initApp.initRounting();
