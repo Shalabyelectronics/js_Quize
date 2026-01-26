@@ -1,5 +1,14 @@
 class App {
-  constructor() {}
+  constructor(baseURL = "https://restcountries.com/v3.1/alpha/") {
+    this.baseURL = baseURL;
+    this.data = [];
+  }
+  fetchCountryData = async (countryCode) => {
+    const response = await fetch(`${this.baseURL + countryCode}`);
+    const data = await response.json();
+    this.data = data;
+    console.log(this.data);
+  };
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
     navItems.forEach((navItem) =>
@@ -30,3 +39,4 @@ class App {
 
 const initApp = new App();
 initApp.initRounting();
+initApp.fetchCountryData("EG");
