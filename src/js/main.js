@@ -3,14 +3,17 @@ class App {
     this.baseURL = baseURL;
     this.countryDataEndpoint = "alpha/";
     this.allCountriesEndpoint = "all";
+    this.weatherCastEndPoint = `https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.006&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`;
     this.optionsParams = {
       allCountriesEndPointParams: "?fields=name,cca2",
     };
-    this.data = [];
+    this.countryData = [];
+    this.weatherData = [];
     this.initEventListeners();
     this.getCountriesToSelect();
     this.selectedCountry = null;
     this.selectedCity = null;
+    this.coords = null;
     this.selectedYear = 2026;
   }
   getCountriesToSelect = async () => {
@@ -29,13 +32,22 @@ class App {
 
     // console.log(countriesSorted);
   };
+  fetchWeatherData = async () => {
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${this.coords[0]}&longitude=${this.coords[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`,
+    );
+    const data = await response.json();
+    this.weatherData = data;
+    console.log(this.weatherData);
+  };
   fetchCountryData = async (countryCode) => {
     const response = await fetch(
       `${this.baseURL + this.countryDataEndpoint + countryCode}`,
     );
     const data = await response.json();
-    this.data = data;
-    this.displayCountryInfo(data[0]);
+    this.countryData = data[0];
+    this.coords = this.countryData.latlng;
+    this.displayCountryInfo(this.countryData);
   };
   initEventListeners = () => {
     const countryCardContainer = document.querySelector(
@@ -48,7 +60,6 @@ class App {
         countryCardContainer.classList.remove("hide");
         this.fetchCountryData(e.currentTarget.value);
         this.selectedCountry = e.currentTarget.value;
-        console.log(this.selectedCountry);
       } else {
         countryCardContainer.classList.add("hide");
       }
@@ -156,9 +167,12 @@ class App {
     const viewComponent = document.querySelector(`#${viewName}-view`);
     clickedLinkEle.classList.add("active");
     viewComponent.classList.add("active");
-    console.log(viewName)
+    console.log(viewName);
     if (this.selectedCountry && viewName === "weather") {
-      console.log("Loading weather for: " + this.selectedCountry);
+      if (this.coords) {
+        console.log("Loading weather for: " + this.selectedCountry);
+        this.fetchWeatherData();
+      }
     }
   };
 }
