@@ -1,13 +1,57 @@
 class App {
-  constructor(baseURL = "https://restcountries.com/v3.1/alpha/") {
+  constructor(baseURL = "https://restcountries.com/v3.1/") {
     this.baseURL = baseURL;
+    this.countryDataEndpoint = "alpha/";
+    this.allCountriesEndpoint = "all";
+    this.optionsParams = {
+      allCountriesEndPointParams: "?fields=name,cca2",
+    };
     this.data = [];
+    this.initEventListeners();
+    this.getCountriesToSelect();
+    this.selectedCountry = null;
+    this.selectedYear = 2026;
   }
+  getCountriesToSelect = async () => {
+    const response = await fetch(
+      `${this.baseURL + this.allCountriesEndpoint + this.optionsParams.allCountriesEndPointParams}`,
+    );
+    const data = await response.json();
+    const selectCountryEle = document.querySelector("#global-country");
+    const countriesSorted = data.sort((a, b) => {
+      return a.name.common.localeCompare(b.name.common);
+    });
+    countriesSorted.forEach((country) => {
+      const optionHTML = `<option value=${country.cca2}>${country.cca2} ${country.name.common}</option>`;
+      selectCountryEle.insertAdjacentHTML("beforeend", optionHTML);
+    });
+
+    console.log(countriesSorted);
+  };
   fetchCountryData = async (countryCode) => {
-    const response = await fetch(`${this.baseURL + countryCode}`);
+    const response = await fetch(
+      `${this.baseURL + this.countryDataEndpoint + countryCode}`,
+    );
     const data = await response.json();
     this.data = data;
     this.displayCountryInfo(data[0]);
+  };
+  initEventListeners = () => {
+    const countryCardContainer = document.querySelector(
+      "#dashboard-country-info-section",
+    );
+    countryCardContainer.classList.add("hide");
+    const selectCountryEle = document.querySelector("#global-country");
+    selectCountryEle.addEventListener("change", (e) => {
+      if (e.currentTarget.value) {
+        countryCardContainer.classList.remove("hide");
+        this.fetchCountryData(e.currentTarget.value);
+        this.selectedCountry = e.currentTarget.value;
+        console.log(this.selectedCountry);
+      } else {
+        countryCardContainer.classList.add("hide");
+      }
+    });
   };
   displayCountryInfo = (countryData) => {
     // 1- Country Flag image
@@ -54,10 +98,10 @@ class App {
     ).children;
     const countryExtraData = {
       currency: Object.values(countryData.currencies)[0],
-      languages: Object.values(countryData.languages).join(', '),
+      languages: Object.values(countryData.languages).join(", "),
       neighbors: countryData.borders,
     };
-    
+
     for (let counteryExtra of countryExtraContainer) {
       let keyName = counteryExtra.children[0].innerText.toLowerCase();
       if (keyName !== "neighbors") {
@@ -74,7 +118,7 @@ class App {
         const bordersElements = countryExtraData[keyName].map(
           (border) => `<span class="extra-tag border-tag">${border}</span>`,
         );
-        bordersContainer.innerHTML = [...bordersElements].join('');
+        bordersContainer.innerHTML = [...bordersElements].join("");
         // console.log(bordersElements);
       }
     }
@@ -89,6 +133,7 @@ class App {
       navItem.addEventListener("click", (e) => {
         e.preventDefault();
         const view = e.currentTarget.getAttribute("data-view");
+        if (!view) return;
         this.mapViews(view, e.currentTarget);
         window.history.pushState({ view }, "", `/${view}`);
       }),
@@ -108,10 +153,12 @@ class App {
     const viewComponent = document.querySelector(`#${viewName}-view`);
     clickedLinkEle.classList.add("active");
     viewComponent.classList.add("active");
+
+    if (this.selectedCountry && viewName === "weather") {
+      console.log("Loading weather for: " + this.selectedCountry);
+    }
   };
 }
-const selectCountryEle = document.querySelector("#global-country");
-console.log(selectCountryEle)
+
 const initApp = new App();
 initApp.initRounting();
-initApp.fetchCountryData("EG");

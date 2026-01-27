@@ -245,7 +245,9 @@
   background: white;
   box-shadow: 0 0 0 3px var(--primary-100);
 }
-
+.hide {
+  display: none;
+}
 .header-search i {
   color: var(--slate-400);
 }
