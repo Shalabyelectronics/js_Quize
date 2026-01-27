@@ -10,6 +10,7 @@ class App {
     this.initEventListeners();
     this.getCountriesToSelect();
     this.selectedCountry = null;
+    this.selectedCity = null;
     this.selectedYear = 2026;
   }
   getCountriesToSelect = async () => {
@@ -26,7 +27,7 @@ class App {
       selectCountryEle.insertAdjacentHTML("beforeend", optionHTML);
     });
 
-    console.log(countriesSorted);
+    // console.log(countriesSorted);
   };
   fetchCountryData = async (countryCode) => {
     const response = await fetch(
@@ -113,8 +114,10 @@ class App {
         }
       } else {
         const bordersContainer = counteryExtra.children[1];
-        // <span class="extra-tag border-tag">LBY</span>
         bordersContainer.innerHTML = "";
+
+        if (!countryExtraData[keyName]) return;
+
         const bordersElements = countryExtraData[keyName].map(
           (border) => `<span class="extra-tag border-tag">${border}</span>`,
         );
@@ -124,8 +127,8 @@ class App {
     }
     // console.log(countryExtraContainer);
     // console.log(countryExtraData);
-
-    // console.log(countryData);
+    this.selectedCity = countryData.capital[0];
+    console.log(this.selectedCity);
   };
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
@@ -153,7 +156,7 @@ class App {
     const viewComponent = document.querySelector(`#${viewName}-view`);
     clickedLinkEle.classList.add("active");
     viewComponent.classList.add("active");
-
+    console.log(viewName)
     if (this.selectedCountry && viewName === "weather") {
       console.log("Loading weather for: " + this.selectedCountry);
     }
