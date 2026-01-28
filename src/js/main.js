@@ -11,27 +11,36 @@ class App {
     this.weatherData = [];
     this.holidayData = [];
     this.initEventListeners();
-    this.getCountriesToSelect();
+    this.fetchCountriesAvailable();
     this.selectedCountry = null;
     this.selectedCity = null;
     this.coords = null;
     this.selectedYear = 2026;
   }
-  getCountriesToSelect = async () => {
-    const response = await fetch(
-      `${this.baseURL + this.allCountriesEndpoint + this.optionsParams.allCountriesEndPointParams}`,
-    );
-    const data = await response.json();
-    const selectCountryEle = document.querySelector("#global-country");
-    const countriesSorted = data.sort((a, b) => {
-      return a.name.common.localeCompare(b.name.common);
-    });
-    countriesSorted.forEach((country) => {
-      const optionHTML = `<option value=${country.cca2}>${country.cca2} ${country.name.common}</option>`;
-      selectCountryEle.insertAdjacentHTML("beforeend", optionHTML);
-    });
-
-    // console.log(countriesSorted);
+  fetchCountriesAvailable = async () => {
+    try {
+      const response = await fetch(
+        `${this.baseURL + this.allCountriesEndpoint + this.optionsParams.allCountriesEndPointParams}`,
+      );
+      if (!response.ok){
+        throw new Error(`API error: ${response.status}`)
+      }
+      const text = await response.text();
+      if(!text){
+        throw new Error("Empty response from Available countries API")
+      }
+      const data = JSON.parse(text);
+      const selectCountryEle = document.querySelector("#global-country");
+      const countriesSorted = data.sort((a, b) => {
+        return a.name.common.localeCompare(b.name.common);
+      });
+      countriesSorted.forEach((country) => {
+        const optionHTML = `<option value=${country.cca2}>${country.cca2} ${country.name.common}</option>`;
+        selectCountryEle.insertAdjacentHTML("beforeend", optionHTML);
+      });
+    } catch (error) {
+      console.error("Available Countries fetch failed:", error.message);
+    }
   };
   fetchHolidayData = async () => {
     try {
@@ -51,7 +60,6 @@ class App {
       const data = JSON.parse(text);
       this.holidayData = data;
       this.displayHolidayInfo(this.holidayData);
-      console.log(this.holidayData);
     } catch (error) {
       console.error("Holiday fetch failed:", error.message);
       document.querySelector("#holidays-content").innerHTML = `
@@ -60,28 +68,48 @@ class App {
     }
   };
   fetchWeatherData = async () => {
-    console.log(
-      "Fetching holidays for:",
-      this.selectedCountry,
-      this.selectedYear,
-    );
-
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${this.coords[0]}&longitude=${this.coords[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`,
-    );
-    const data = await response.json();
-    this.weatherData = data;
-    this.displayWeatherInfo(this.weatherData);
+    try {
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${this.coords[0]}&longitude=${this.coords[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`,
+      );
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from Weather API");
+      }
+      const data = JSON.parse(text);
+      this.weatherData = data;
+      this.displayWeatherInfo(this.weatherData);
+    } catch (error) {
+      console.log("Holiday fetch faild:", error.message);
+      document.querySelector("#weather-content").innerHTML =
+        `<div class="weather-error">No weather data available for ${this.selectedCountry} in ${this.selectedYear}.</div>`;
+    }
   };
   fetchCountryData = async (countryCode) => {
-    const response = await fetch(
-      `${this.baseURL + this.countryDataEndpoint + countryCode}`,
-    );
-    const data = await response.json();
-    this.countryData = data[0];
-    this.coords = this.countryData.latlng;
-    this.selectedCity = this.countryData.capital[0];
-    this.displayCountryInfo(this.countryData);
+    try {
+      const response = await fetch(
+        `${this.baseURL + this.countryDataEndpoint + countryCode}`,
+      );
+      if (!response.ok) {
+        throw new Error(`API error: $ {response.status}`);
+      }
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from Country API");
+      }
+      const data = JSON.parse(text);
+      this.countryData = data[0];
+      this.coords = this.countryData.latlng;
+      this.selectedCity = this.countryData.capital[0];
+      this.displayCountryInfo(this.countryData);
+    } catch (error) {
+      console.log("Country fetch faild:", error.message);
+      document.querySelector("#dashboard-country-info-section").innerHTML =
+        `<div class="country-error">No Country data available for ${this.selectedCountry} in ${this.selectedYear}.</div>`;
+    }
   };
   initEventListeners = () => {
     const countryCardContainer = document.querySelector(
