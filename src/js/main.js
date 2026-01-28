@@ -205,7 +205,6 @@ class App {
       "fa-water",
     );
     heroIcon.classList.add(style.icon);
-    console.log("Applying icon:", style.icon);
 
     const weatherLocationEle =
       weatherViewComponent.querySelector(".weather-location");
@@ -338,7 +337,7 @@ class App {
       item.innerHTML = ` <div class="forecast-day-name"> <span class="day-label">${dayLabel}</span> <span class="day-date">${dayDate}</span> </div> <div class="forecast-icon"><i class="fa-solid ${iconClass}"></i></div> <div class="forecast-temps"> <span class="temp-max">${max}°</span> <span class="temp-min">${min}°</span> </div> <div class="forecast-precip"> ${precipVal > 0 ? `<i class="fa-solid fa-droplet"></i><span>${precipVal}%</span>` : ""} </div> `;
       forecastList.appendChild(item);
     });
-    console.log(forecastList);
+    // console.log(forecastList);
   };
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
@@ -348,7 +347,8 @@ class App {
         const view = e.currentTarget.getAttribute("data-view");
         if (!view) return;
         this.mapViews(view, e.currentTarget);
-        window.history.pushState({ view }, "", `/${view}`);
+        // window.history.pushState({ view }, "", `/${view}`);
+        window.location.hash = `#/${view}`;
       }),
     );
   };
@@ -366,10 +366,10 @@ class App {
     const viewComponent = document.querySelector(`#${viewName}-view`);
     clickedLinkEle.classList.add("active");
     viewComponent.classList.add("active");
-    console.log(viewName);
+    // console.log(viewName);
     if (this.selectedCountry && viewName === "weather") {
       if (this.coords) {
-        console.log("Loading weather for: " + this.selectedCountry);
+        // console.log("Loading weather for: " + this.selectedCountry);
         this.fetchWeatherData();
       }
     }
@@ -378,3 +378,4 @@ class App {
 
 const initApp = new App();
 initApp.initRounting();
+window.history.replaceState({}, "", "/");
