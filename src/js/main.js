@@ -9,6 +9,7 @@ class App {
     };
     this.countryData = [];
     this.weatherData = [];
+    this.holidayData = [];
     this.initEventListeners();
     this.getCountriesToSelect();
     this.selectedCountry = null;
@@ -32,7 +33,39 @@ class App {
 
     // console.log(countriesSorted);
   };
+  fetchHolidayData = async () => {
+    try {
+      const response = await fetch(
+        `https://date.nager.at/api/v3/PublicHolidays/${this.selectedYear}/${this.selectedCountry}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from holiday API");
+      }
+
+      const data = JSON.parse(text);
+      this.holidayData = data;
+      this.displayHolidayInfo(this.holidayData);
+      console.log(this.holidayData);
+    } catch (error) {
+      console.error("Holiday fetch failed:", error.message);
+      document.querySelector("#holidays-content").innerHTML = `
+      <div class="holiday-error">No holiday data available for ${this.selectedCountry} in ${this.selectedYear}.</div>
+    `;
+    }
+  };
   fetchWeatherData = async () => {
+    console.log(
+      "Fetching holidays for:",
+      this.selectedCountry,
+      this.selectedYear,
+    );
+
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${this.coords[0]}&longitude=${this.coords[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`,
     );
@@ -339,6 +372,20 @@ class App {
     });
     // console.log(forecastList);
   };
+  displayHolidayInfo = (holidaysData) => {
+    const holidayCardsContainer = document.querySelector("#holidays-content");
+    holidayCardsContainer.innerHTML = "";
+    holidaysData.forEach((holiday) => {
+      const date = new Date(holiday.date);
+      const day = date.getDate();
+      const month = date.toLocaleString("en-US", { month: "short" });
+      const weekday = date.toLocaleString("en-US", { weekday: "long" });
+      const holidayCard = document.createElement("div");
+      holidayCard.classList.add("holiday-card");
+      holidayCard.innerHTML = ` <div class="holiday-card-header"> <div class="holiday-date-box"> <span class="day">${day}</span><span class="month">${month}</span> </div> <button class="holiday-action-btn"> <i class="fa-regular fa-heart"></i> </button> </div> <h3>${holiday.name}</h3> <p class="holiday-name">${holiday.localName}</p> <div class="holiday-card-footer"> <span class="holiday-day-badge"> <i class="fa-regular fa-calendar"></i> ${weekday} </span> <span class="holiday-type-badge">${holiday.types.join(", ")}</span> </div> `;
+      holidayCardsContainer.appendChild(holidayCard);
+    });
+  };
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
     navItems.forEach((navItem) =>
@@ -372,6 +419,8 @@ class App {
         // console.log("Loading weather for: " + this.selectedCountry);
         this.fetchWeatherData();
       }
+    } else if (this.selectedCountry && viewName === "holidays") {
+      this.fetchHolidayData();
     }
   };
 }
