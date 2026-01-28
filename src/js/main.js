@@ -38,7 +38,7 @@ class App {
     );
     const data = await response.json();
     this.weatherData = data;
-    console.log(this.weatherData);
+    this.displayWeatherInfo(this.weatherData);
   };
   fetchCountryData = async (countryCode) => {
     const response = await fetch(
@@ -47,6 +47,7 @@ class App {
     const data = await response.json();
     this.countryData = data[0];
     this.coords = this.countryData.latlng;
+    this.selectedCity = this.countryData.capital[0];
     this.displayCountryInfo(this.countryData);
   };
   initEventListeners = () => {
@@ -65,6 +66,7 @@ class App {
       }
     });
   };
+  // Display Methods
   displayCountryInfo = (countryData) => {
     // 1- Country Flag image
     const countryFlagImg = document.querySelector(".dashboard-country-flag");
@@ -72,10 +74,10 @@ class App {
     countryFlagImg.setAttribute("alt", countryData.flags.alt);
     // 2- Country name
     const countryName = document.querySelector(".dashboard-country-title h3");
-    countryName.innerText = countryData.name.common;
+    countryName.textContent = countryData.name.common;
     // 3- country official name
     const countryOfficialName = document.querySelector(".official-name");
-    countryOfficialName.innerText = countryData.name.official;
+    countryOfficialName.textContent = countryData.name.official;
     // 4- country region
     const countryRegion = document.querySelector(".region");
     countryRegion.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${countryData.region} • ${countryData.subregion}`;
@@ -100,8 +102,8 @@ class App {
     for (let countryDetail of countryDetails) {
       let keyName = countryDetail
         .querySelector(".label")
-        .innerText.toLowerCase();
-      countryDetail.querySelector(".value").innerText =
+        .textContent.toLowerCase();
+      countryDetail.querySelector(".value").textContent =
         countryDetailsData[keyName];
     }
     // 6- country Extras
@@ -115,12 +117,12 @@ class App {
     };
 
     for (let counteryExtra of countryExtraContainer) {
-      let keyName = counteryExtra.children[0].innerText.toLowerCase();
+      let keyName = counteryExtra.children[0].textContent.toLowerCase();
       if (keyName !== "neighbors") {
         if (keyName === "currency") {
-          counteryExtra.children[1].children[0].innerText = `${countryExtraData[keyName].name} (${countryExtraData[keyName].symbol})`;
+          counteryExtra.children[1].children[0].textContent = `${countryExtraData[keyName].name} (${countryExtraData[keyName].symbol})`;
         } else if (keyName === "languages") {
-          counteryExtra.children[1].children[0].innerText =
+          counteryExtra.children[1].children[0].textContent =
             countryExtraData[keyName];
         }
       } else {
@@ -138,8 +140,205 @@ class App {
     }
     // console.log(countryExtraContainer);
     // console.log(countryExtraData);
-    this.selectedCity = countryData.capital[0];
-    console.log(this.selectedCity);
+  };
+  displayWeatherInfo = (weatherData) => {
+    const weatherCodeDescriptions = {
+      0: "Clear sky",
+      1: "Mainly clear",
+      2: "Partly cloudy",
+      3: "Overcast",
+      45: "Fog",
+      48: "Depositing rime fog",
+      51: "Drizzle: Light",
+      53: "Drizzle: Moderate",
+      55: "Drizzle: Dense",
+      61: "Rain: Slight",
+      63: "Rain: Moderate",
+      65: "Rain: Heavy",
+      71: "Snow fall: Slight",
+      73: "Snow fall: Moderate",
+      75: "Snow fall: Heavy",
+      80: "Rain showers: Slight",
+      81: "Rain showers: Moderate",
+      82: "Rain showers: Violent",
+      95: "Thunderstorm: Slight",
+      96: "Thunderstorm: Moderate with hail",
+      99: "Thunderstorm: Moderate with hail",
+    };
+    const weatherStyles = {
+      0: { class: "weather-sunny", icon: "fa-sun" },
+      1: { class: "weather-sunny", icon: "fa-sun" },
+      2: { class: "weather-cloudy", icon: "fa-cloud-sun" },
+      3: { class: "weather-cloudy", icon: "fa-cloud" },
+      45: { class: "weather-foggy", icon: "fa-water" }, // use fa-water instead of fa-smog
+      48: { class: "weather-foggy", icon: "fa-water" },
+      51: { class: "weather-rainy", icon: "fa-cloud-rain" },
+      61: { class: "weather-rainy", icon: "fa-cloud-rain" },
+      71: { class: "weather-snowy", icon: "fa-snowflake" },
+      80: { class: "weather-rainy", icon: "fa-cloud-showers-heavy" },
+      95: { class: "weather-stormy", icon: "fa-bolt" },
+    };
+
+    const code = weatherData.current.weather_code;
+    const weatherViewComponent = document.querySelector("#weather-view");
+    const viewHeaderContentEle = weatherViewComponent.querySelector(
+      ".view-header-content",
+    );
+    viewHeaderContentEle.children[1].textContent = `Check 7-day weather forecasts for ${this.selectedCity}`;
+    // Change header style
+    const style = weatherStyles[code] || {
+      class: "weather-default",
+      icon: "fa-question",
+    };
+    const heroCard = document.querySelector(".weather-hero-card");
+    const heroIcon = document.querySelector(".weather-hero-icon i");
+
+    heroCard.className = `weather-hero-card   ${style.class}`;
+    heroIcon.classList.remove(
+      "fa-sun",
+      "fa-cloud",
+      "fa-cloud-sun",
+      "fa-bolt",
+      "fa-snowflake",
+      "fa-cloud-rain",
+      "fa-cloud-showers-heavy",
+      "fa-water",
+    );
+    heroIcon.classList.add(style.icon);
+    console.log("Applying icon:", style.icon);
+
+    const weatherLocationEle =
+      weatherViewComponent.querySelector(".weather-location");
+    weatherLocationEle.children[1].textContent = this.selectedCity;
+    // Date
+    const apiTime = weatherData.current.time;
+    const date = new Date(apiTime);
+    const optionsDate = {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    };
+    const formattedDate = date.toLocaleDateString("en-US", optionsDate);
+    weatherLocationEle.children[2].textContent = formattedDate;
+    // Temp and unit
+    const temp = Math.round(weatherData.current.temperature_2m);
+    const unit = weatherData.current_units.temperature_2m;
+    weatherViewComponent.querySelector(".temp-value").textContent = temp;
+    weatherViewComponent.querySelector(".temp-unit").textContent = unit;
+    // weather hero right element
+
+    weatherViewComponent.querySelector(".weather-condition").textContent =
+      weatherCodeDescriptions[code];
+    const feelsLike = Math.round(weatherData.current.apparent_temperature);
+    const feelsLikeUnit = weatherData.current_units.apparent_temperature;
+    weatherViewComponent.querySelector(".weather-feels").textContent =
+      `Feels like ${feelsLike}${feelsLikeUnit}`;
+
+    const high = Math.round(weatherData.daily.temperature_2m_max[0]);
+    const low = Math.round(weatherData.daily.temperature_2m_min[0]);
+
+    weatherViewComponent.querySelector(".high").innerHTML =
+      `<i class="fa-solid fa-arrow-up"></i> ${high}°`;
+    weatherViewComponent.querySelector(".low").innerHTML =
+      `<i class="fa-solid fa-arrow-down"></i> ${low}°`;
+
+    // Weather details grid
+    const weatherDetailsContainer = weatherViewComponent.querySelector(
+      ".weather-details-grid",
+    );
+    // Humidity
+    const humidityCard = weatherDetailsContainer.children[0];
+    humidityCard.querySelector(".detail-value").textContent =
+      `${weatherData.current.relative_humidity_2m}%`;
+    // Wind
+    const windCard = weatherDetailsContainer.children[1];
+    windCard.querySelector(".detail-value").textContent =
+      `${Math.round(weatherData.current.wind_speed_10m)} km/h`;
+    // if uv available
+    if (weatherData.current.uv_index !== undefined) {
+      weatherDetailsContainer.children[2].querySelector(
+        ".detail-value",
+      ).textContent = weatherData.current.uv_index;
+    }
+
+    // if Precipitation available
+
+    if (weatherData.daily.precipitation_probability) {
+      weatherDetailsContainer.children[3].querySelector(
+        ".detail-value",
+      ).textContent = `${weatherData.daily.precipitation_probability[0]}%`;
+    }
+
+    // Hourly Forecast
+
+    const weatherIcons = {
+      0: "fa-sun", // Clear sky
+      1: "fa-sun", // Mainly clear
+      2: "fa-cloud-sun", // Partly cloudy
+      3: "fa-cloud", // Overcast
+      45: "fa-smog", // Fog
+      48: "fa-smog", // Depositing rime fog
+      51: "fa-cloud-rain", // Drizzle
+      61: "fa-cloud-rain", // Rain
+      71: "fa-snowflake", // Snow
+      80: "fa-cloud-showers-heavy", // Rain showers
+      95: "fa-bolt", // Thunderstorm
+    };
+
+    const hourlyScroll = weatherViewComponent.querySelector(".hourly-scroll");
+    hourlyScroll.innerHTML = "";
+    const times = weatherData.hourly.time;
+    const codes = weatherData.hourly.weather_code;
+    const temps = weatherData.hourly.temperature_2m;
+    const precip = weatherData.hourly.precipitation_probability;
+    times.slice(0, 12).forEach((time, index) => {
+      const date = new Date(time);
+      const formattedTime = date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        hour12: true,
+      });
+      const temp = Math.round(temps[index]);
+      const code = codes[index];
+      const iconClass = weatherIcons[code] || "fa-question";
+      const item = document.createElement("div");
+      item.classList.add("hourly-item");
+      index === 0 ? item.classList.add("now") : "";
+      item.innerHTML = ` <span class="hourly-time ">${index === 0 ? "Now" : formattedTime}</span> <div class="hourly-icon"><i class="fa-solid ${iconClass}"></i></div> <span class="hourly-temp">${temp}°</span> <span class="hourly-precip">${precip[index]}%</span> `;
+      hourlyScroll.appendChild(item);
+    });
+
+    // 7-Day Forecast
+    const forecastList = weatherViewComponent.querySelector(".forecast-list");
+    forecastList.innerHTML = "";
+    const days = weatherData.daily.time;
+    const maxTemps = weatherData.daily.temperature_2m_max;
+    const minTemps = weatherData.daily.temperature_2m_min;
+    const codesDaily = weatherData.daily.weather_code;
+    const precipDaily = weatherData.daily.precipitation_probability_max;
+
+    days.forEach((day, index) => {
+      const date = new Date(day);
+      const dayLabel =
+        index === 0
+          ? "Today"
+          : date.toLocaleDateString("en-US", { weekday: "short" });
+      const dayDate = date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+      });
+      const max = Math.round(maxTemps[index]);
+      const min = Math.round(minTemps[index]);
+      const code = codesDaily[index];
+      const iconClass = weatherIcons[code] || "fa-question";
+      const precipVal = precipDaily[index] || 0;
+      const item = document.createElement("div");
+      item.classList.add("forecast-day");
+      if (index === 0) item.classList.add("today");
+      item.innerHTML = ` <div class="forecast-day-name"> <span class="day-label">${dayLabel}</span> <span class="day-date">${dayDate}</span> </div> <div class="forecast-icon"><i class="fa-solid ${iconClass}"></i></div> <div class="forecast-temps"> <span class="temp-max">${max}°</span> <span class="temp-min">${min}°</span> </div> <div class="forecast-precip"> ${precipVal > 0 ? `<i class="fa-solid fa-droplet"></i><span>${precipVal}%</span>` : ""} </div> `;
+      forecastList.appendChild(item);
+    });
+    console.log(forecastList);
   };
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
