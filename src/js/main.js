@@ -169,13 +169,34 @@ class App {
       this.displayHolidayInfo(this.holidayData);
     } catch (error) {
       console.error("Holiday fetch failed:", error.message);
-      document.querySelector("#holidays-content").innerHTML = `
-      <div class="holiday-error">No holiday data available for ${this.selectedCountry} in ${this.selectedYear}.</div>
-    `;
+      this.renderNoDataState(
+        "#holidays-content",
+        "No Holidays Found",
+        `No public holidays found for ${this.selectedYear}`,
+        "calendar-xmark",
+      );
     }
   };
 
   fetchEventsData = async () => {
+    const eventsContainer = document.querySelector("#events-content");
+    if (!this.selectedCity) {
+      eventsContainer.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-ticket"></i></div>
+        <h3>No City Selected</h3>
+        <p>Select a country and city from the dashboard to discover events</p>
+        <button class="btn btn-primary" id="event-redirect">
+          <i class="fa-solid fa-globe"></i> Go to Dashboard
+        </button>
+      </div>`;
+      document.querySelector("#event-redirect").onclick = () =>
+        this.mapViews(
+          "dashboard",
+          document.querySelector('[data-view="dashboard"]'),
+        );
+      return;
+    }
     try {
       const apiKey = "VwECw2OiAzxVzIqnwmKJUG41FbeXJk1y";
       const city = this.selectedCity || "New York";
@@ -272,18 +293,29 @@ class App {
       }
 
       const data = JSON.parse(text);
+      if (!data || data.length === 0) {
+        this.displayNoLongWeekendsState();
+        return;
+      }
+
       this.longWeekendsData = data;
       this.displayLongWeekendsInfo(this.longWeekendsData);
     } catch (error) {
       console.error("Long weekends fetch failed:", error.message);
-      document.querySelector("#lw-content").innerHTML = `
-      <div class="lw-error" style="padding: 2rem; text-align: center; color: var(--text-secondary); grid-column: 1 / -1;">
-        <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-        <p>No long weekends data available for ${this.selectedCountry} in ${this.selectedYear}.</p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try selecting a different country.</p>
-      </div>
-    `;
+      this.displayNoLongWeekendsState();
     }
+  };
+
+  displayNoLongWeekendsState = () => {
+    document.querySelector("#lw-content").innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="fa-solid fa-umbrella-beach"></i>
+      </div>
+      <h3>No Long Weekends</h3>
+      <p>No long weekends found for ${this.selectedYear}</p>
+    </div>
+  `;
   };
 
   fetchWeatherData = async () => {
@@ -302,9 +334,17 @@ class App {
       this.weatherData = data;
       this.displayWeatherInfo(this.weatherData);
     } catch (error) {
-      console.log("Holiday fetch faild:", error.message);
-      document.querySelector("#weather-content").innerHTML =
-        `<div class="weather-error">No weather data available for ${this.selectedCountry} in ${this.selectedYear}.</div>`;
+      console.error("Weather fetch failed:", error.message);
+
+      document.querySelector("#weather-content").innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="fa-solid fa-cloud-sun"></i>
+        </div>
+        <h3>No Weather Data Found</h3>
+        <p>Unable to retrieve weather information for ${this.selectedCity} in ${this.selectedYear}. Please try again later.</p>
+      </div>
+    `;
     }
   };
   fetchCountryData = async (countryCode) => {
@@ -363,9 +403,13 @@ class App {
         .classList.remove("hidden");
       console.log(this.countryData);
     } catch (error) {
-      console.log("Country fetch faild:", error.message);
-      document.querySelector("#dashboard-country-info-section").innerHTML =
-        `<div class="country-error">No Country data available for ${this.selectedCountry} in ${this.selectedYear}.</div>`;
+      document.querySelector("#dashboard-country-info").innerHTML = `
+      <div class="country-info-placeholder">
+        <div class="placeholder-icon error">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <p>Failed to load country information. Please try again.</p>
+      </div>`;
     }
   };
   selectCountrytEventListeners = () => {
@@ -1068,7 +1112,14 @@ class App {
 
     // Update page title and subtitle
     this.updatePageTitle(viewName);
-
+    if (
+      !this.selectedCountry &&
+      viewName !== "dashboard" &&
+      viewName !== "my-plans"
+    ) {
+      this.showEmptyState(viewName);
+      return;
+    }
     // console.log(viewName);
     if (this.selectedCountry && viewName === "weather") {
       if (this.coords) {
@@ -1088,6 +1139,38 @@ class App {
     } else if (viewName === "currency") {
       this.handleConversion();
     }
+  };
+
+  showEmptyState = (viewName) => {
+    const containerMap = {
+      holidays: "#holidays-content",
+      weather: "#weather-content",
+      events: "#events-content",
+      "long-weekends": "#lw-content",
+      "sun-times": "#sun-times-content",
+    };
+
+    const containerSelector = containerMap[viewName];
+    if (!containerSelector) return;
+
+    const container = document.querySelector(containerSelector);
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-calendar-xmark"></i></div>
+        <h3>No Country Selected</h3>
+        <p>Select a country from the dashboard to explore ${viewName.replace("-", " ")}</p>
+        <button class="btn btn-primary" id="redirect-dashboard">
+          <i class="fa-solid fa-globe"></i> Go to Dashboard
+        </button>
+      </div>
+    `;
+
+    document
+      .querySelector("#redirect-dashboard")
+      .addEventListener("click", () => {
+        const dashboardNav = document.querySelector('[data-view="dashboard"]');
+        this.mapViews("dashboard", dashboardNav);
+      });
   };
 
   saveToPlans = (planData) => {
