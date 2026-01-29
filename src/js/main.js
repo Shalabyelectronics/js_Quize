@@ -506,11 +506,60 @@ class App {
     );
     navItems.forEach((navItem) => navItem.classList.remove("active"));
   };
+  updatePageTitle = (viewName) => {
+    const titles = {
+      dashboard: {
+        title: "Dashboard",
+        subtitle: "Welcome back! Ready to plan your next adventure?",
+      },
+      holidays: {
+        title: "Public Holidays",
+        subtitle: "Discover public holidays and plan your trips accordingly",
+      },
+      events: {
+        title: "Local Events",
+        subtitle: "Explore exciting events happening around the world",
+      },
+      weather: {
+        title: "Weather Forecast",
+        subtitle: "Check current weather conditions and forecasts",
+      },
+      "long-weekends": {
+        title: "Long Weekends",
+        subtitle: "Find the perfect long weekends for your getaway",
+      },
+      currency: {
+        title: "Currency Exchange",
+        subtitle: "Convert currencies for your travel budget planning",
+      },
+      "sun-times": {
+        title: "Sunrise & Sunset Times",
+        subtitle: "Track daylight hours for your destination",
+      },
+      "my-plans": {
+        title: "My Travel Plans",
+        subtitle: "Manage and organize your upcoming trips",
+      },
+    };
+
+    const pageData = titles[viewName] || {
+      title: "Wanderlust",
+      subtitle: "Your global travel planner",
+    };
+
+    document.querySelector("#page-title").textContent = pageData.title;
+    document.querySelector("#page-subtitle").textContent = pageData.subtitle;
+  };
+
   mapViews = (viewName, clickedLinkEle) => {
     this.clearActiveView();
     const viewComponent = document.querySelector(`#${viewName}-view`);
     clickedLinkEle.classList.add("active");
     viewComponent.classList.add("active");
+
+    // Update page title and subtitle
+    this.updatePageTitle(viewName);
+
     // console.log(viewName);
     if (this.selectedCountry && viewName === "weather") {
       if (this.coords) {
