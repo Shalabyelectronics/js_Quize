@@ -21,7 +21,11 @@
   align-items: center;
   gap: 24px;
   padding: 32px;
-  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-500) 0%,
+    var(--primary-600) 100%
+  );
   color: white;
 }
 
@@ -253,10 +257,11 @@
   text-align: center;
 }
 
-.currency-select {
+.currency-select-group .form-select {
   text-align: center;
   font-weight: 600;
   padding: 12px 16px;
+  width: 100%;
 }
 
 /* Currency Swap Button Wrapper */
@@ -614,12 +619,24 @@
   margin-bottom: 12px;
 }
 
-.sun-time-card.sunrise .icon { color: #f59e0b; }
-.sun-time-card.sunset .icon { color: #ea580c; }
-.sun-time-card.dawn .icon { color: #6366f1; }
-.sun-time-card.dusk .icon { color: #8b5cf6; }
-.sun-time-card.noon .icon { color: #f97316; }
-.sun-time-card.daylight .icon { color: #10b981; }
+.sun-time-card.sunrise .icon {
+  color: #f59e0b;
+}
+.sun-time-card.sunset .icon {
+  color: #ea580c;
+}
+.sun-time-card.dawn .icon {
+  color: #6366f1;
+}
+.sun-time-card.dusk .icon {
+  color: #8b5cf6;
+}
+.sun-time-card.noon .icon {
+  color: #f97316;
+}
+.sun-time-card.daylight .icon {
+  color: #10b981;
+}
 
 .sun-time-card .label {
   font-size: 12px;
@@ -734,7 +751,7 @@
   .widgets-row.three-col {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .widgets-row.three-col .widget-card:last-child {
     grid-column: span 2;
   }
@@ -746,55 +763,55 @@
   .widgets-row.four-col {
     grid-template-columns: 1fr;
   }
-  
+
   .widgets-row.three-col .widget-card:last-child {
     grid-column: span 1;
   }
-  
+
   .country-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .country-flag {
     width: 100px;
     height: 67px;
   }
-  
+
   .currency-selects {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .currency-select-group {
     max-width: 100%;
     width: 100%;
   }
-  
+
   .currency-swap-btn {
     margin-top: 0;
     transform: rotate(90deg);
   }
-  
+
   .currency-swap-btn:hover {
     transform: rotate(270deg);
   }
-  
+
   .conversion-display {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .conversion-equals {
     transform: rotate(90deg);
   }
-  
+
   .sun-main-header {
     flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-  
+
   .sun-date-display {
     text-align: center;
   }
@@ -965,7 +982,7 @@
   font-size: 48px;
   font-weight: 700;
   color: var(--slate-800);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   line-height: 1;
 }
 
@@ -1176,9 +1193,15 @@
   border-radius: 50%;
 }
 
-.legend-dot.best { background: var(--green-500); }
-.legend-dot.good { background: var(--amber-500); }
-.legend-dot.avoid { background: var(--red-500); }
+.legend-dot.best {
+  background: var(--green-500);
+}
+.legend-dot.good {
+  background: var(--amber-500);
+}
+.legend-dot.avoid {
+  background: var(--red-500);
+}
 
 /* Holidays Widget */
 .holidays-preview-list {
@@ -1314,9 +1337,15 @@
   text-align: center;
 }
 
-.emergency-item i.fa-shield-halved { color: var(--blue-500); }
-.emergency-item i.fa-truck-medical { color: var(--red-500); }
-.emergency-item i.fa-fire-extinguisher { color: var(--orange-500); }
+.emergency-item i.fa-shield-halved {
+  color: var(--blue-500);
+}
+.emergency-item i.fa-truck-medical {
+  color: var(--red-500);
+}
+.emergency-item i.fa-fire-extinguisher {
+  color: var(--orange-500);
+}
 
 .emergency-item .label {
   flex: 1;
@@ -1328,7 +1357,7 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--slate-800);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
 }
 
 /* Power Plug Widget */
@@ -1520,9 +1549,15 @@
   font-size: 24px;
 }
 
-.visa-status.visa-free i { color: var(--green-500); }
-.visa-status.visa-required i { color: var(--amber-500); }
-.visa-status.visa-strict i { color: var(--red-500); }
+.visa-status.visa-free i {
+  color: var(--green-500);
+}
+.visa-status.visa-required i {
+  color: var(--amber-500);
+}
+.visa-status.visa-strict i {
+  color: var(--red-500);
+}
 
 .visa-status .status-text {
   flex: 1;
