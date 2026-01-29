@@ -170,6 +170,17 @@ class App {
 
       const data = JSON.parse(text);
       this.holidayData = data;
+      this.displayHolidayInfo(this.holidayData);
+    } catch (error) {
+      console.error("Holiday fetch failed:", error.message);
+      console.error("Error details:", error);
+      document.querySelector("#holidays-content").innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-calendar-xmark"></i></div>
+        <h3>Unable to Load Holidays</h3>
+        <p>Could not retrieve holidays for ${this.selectedYear}. Please try again later.</p>
+      </div>`;
+    } finally {
       const holidayView = document.querySelector("#holidays-view");
       const holidayHeader = holidayView.querySelector(".view-header-content");
       const holidayBadge = holidayView.querySelector(
@@ -187,16 +198,6 @@ class App {
 
       holidayView.querySelector(".view-header-selection").style.display =
         "flex";
-      this.displayHolidayInfo(this.holidayData);
-    } catch (error) {
-      console.error("Holiday fetch failed:", error.message);
-      this.renderNoDataState(
-        "#holidays-content",
-        "No Holidays Found",
-        `No public holidays found for ${this.selectedYear}`,
-        "calendar-xmark",
-      );
-    } finally {
       this.hideLoading();
     }
   };
@@ -221,13 +222,13 @@ class App {
       return;
     }
     this.showLoading("Loading events details...");
+    const apiKey = "VwECw2OiAzxVzIqnwmKJUG41FbeXJk1y";
+    const city = this.selectedCity || "New York";
+    const countryCode = this.selectedCountry || "US";
     try {
-      const apiKey = "VwECw2OiAzxVzIqnwmKJUG41FbeXJk1y";
-      const city = this.selectedCity || "New York";
-      const countryCode = this.selectedCountry || "US";
-
       const response = await fetch(
         `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${apiKey}&city=${encodeURIComponent(city)}&countryCode=${countryCode}&size=20`,
+        { mode: "cors" },
       );
 
       if (!response.ok) {
@@ -259,11 +260,12 @@ class App {
       this.displayEventsInfo(this.eventsData);
     } catch (error) {
       console.error("Events fetch failed:", error.message);
+      console.error("Error details:", error);
       document.querySelector("#events-content").innerHTML = `
       <div class="event-error" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
         <i class="fa-solid fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-        <p>No events available for ${city}, ${countryCode}.</p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try selecting a different city or country.</p>
+        <p>Unable to load events for ${city}, ${countryCode}.</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">The Ticketmaster API may be temporarily unavailable. Please try again later or select a different city.</p>
       </div>
     `;
     } finally {
@@ -519,6 +521,15 @@ class App {
         document
           .querySelectorAll(".selection-city")
           .forEach((el) => (el.textContent = " • " + this.selectedCity));
+
+        // Update event header with current city
+        const eventsHeader = document.querySelector(
+          "#events-view .view-header-content",
+        );
+        if (eventsHeader) {
+          eventsHeader.querySelector("p").textContent =
+            `Discover concerts, sports, theatre and more in ${this.selectedCity}`;
+        }
       }
     });
   };
