@@ -150,6 +150,7 @@ class App {
     }
   };
   fetchHolidayData = async () => {
+    this.showLoading("Fetching holidays...");
     try {
       const response = await fetch(
         `https://date.nager.at/api/v3/PublicHolidays/${this.selectedYear}/${this.selectedCountry}`,
@@ -175,6 +176,8 @@ class App {
         `No public holidays found for ${this.selectedYear}`,
         "calendar-xmark",
       );
+    } finally {
+      this.hideLoading();
     }
   };
 
@@ -197,6 +200,7 @@ class App {
         );
       return;
     }
+    this.showLoading("Loading events details...");
     try {
       const apiKey = "VwECw2OiAzxVzIqnwmKJUG41FbeXJk1y";
       const city = this.selectedCity || "New York";
@@ -227,6 +231,8 @@ class App {
         <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try selecting a different city or country.</p>
       </div>
     `;
+    } finally {
+      this.hideLoading();
     }
   };
 
@@ -274,6 +280,7 @@ class App {
   };
 
   fetchLongWeekendsData = async () => {
+    this.showLoading("Loading long weekends details...");
     try {
       if (!this.selectedCountry) {
         throw new Error("No country selected");
@@ -303,6 +310,8 @@ class App {
     } catch (error) {
       console.error("Long weekends fetch failed:", error.message);
       this.displayNoLongWeekendsState();
+    } finally {
+      this.hideLoading();
     }
   };
 
@@ -319,6 +328,7 @@ class App {
   };
 
   fetchWeatherData = async () => {
+    this.showLoading("Loading weather details...");
     try {
       const response = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${this.coords[0]}&longitude=${this.coords[1]}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`,
@@ -345,9 +355,12 @@ class App {
         <p>Unable to retrieve weather information for ${this.selectedCity} in ${this.selectedYear}. Please try again later.</p>
       </div>
     `;
+    } finally {
+      this.hideLoading();
     }
   };
   fetchCountryData = async (countryCode) => {
+    this.showLoading("Loading destination details...");
     try {
       const response = await fetch(
         `${this.baseURL + this.countryDataEndpoint + countryCode}`,
@@ -410,6 +423,8 @@ class App {
         </div>
         <p>Failed to load country information. Please try again.</p>
       </div>`;
+    } finally {
+      this.hideLoading();
     }
   };
   selectCountrytEventListeners = () => {
@@ -1551,7 +1566,7 @@ class App {
     }, 3000);
   };
 
-  showLoader = (text = "Loading...") => {
+  showLoading = (text = "Loading...") => {
     const loadingOverlay = document.querySelector("#loading-overlay");
     const loadingText = document.querySelector("#loading-text");
 
@@ -1563,7 +1578,7 @@ class App {
     }
   };
 
-  hideLoader = () => {
+  hideLoading = () => {
     const loadingOverlay = document.querySelector("#loading-overlay");
     if (loadingOverlay) {
       loadingOverlay.classList.add("hidden");
