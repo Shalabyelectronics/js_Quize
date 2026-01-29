@@ -167,6 +167,23 @@ class App {
 
       const data = JSON.parse(text);
       this.holidayData = data;
+      const holidayView = document.querySelector("#holidays-view");
+      const holidayHeader = holidayView.querySelector(".view-header-content");
+      const holidayBadge = holidayView.querySelector(
+        ".current-selection-badge",
+      );
+      holidayHeader.querySelector("p").textContent =
+        `Browse public holidays for ${this.countryData.name.common} and plan your trips around them`;
+
+      holidayBadge.querySelector("img").src = this.countryData.flags.png;
+      holidayBadge.querySelector("img").alt = this.countryData.name.common;
+      holidayBadge.querySelector("span").textContent =
+        this.countryData.name.common;
+      holidayBadge.querySelector(".selection-year").textContent =
+        this.selectedYear;
+
+      holidayView.querySelector(".view-header-selection").style.display =
+        "flex";
       this.displayHolidayInfo(this.holidayData);
     } catch (error) {
       console.error("Holiday fetch failed:", error.message);
@@ -220,6 +237,21 @@ class App {
       }
 
       const data = JSON.parse(text);
+      const eventsView = document.querySelector("#events-view");
+      const eventsHeader = eventsView.querySelector(".view-header-content");
+      const eventsBadge = eventsView.querySelector(".current-selection-badge");
+
+      eventsHeader.querySelector("p").textContent =
+        `Discover concerts, sports, theatre and more in ${this.selectedCity}`;
+
+      eventsBadge.querySelector("img").src = this.countryData.flags.png;
+      eventsBadge.querySelector("img").alt = this.countryData.name.common;
+      eventsBadge.querySelector("span").textContent =
+        this.countryData.name.common;
+      eventsBadge.querySelector(".selection-city").textContent =
+        ` • ${this.selectedCity}`;
+
+      eventsView.querySelector(".view-header-selection").style.display = "flex";
       this.eventsData = data._embedded?.events || [];
       this.displayEventsInfo(this.eventsData);
     } catch (error) {
