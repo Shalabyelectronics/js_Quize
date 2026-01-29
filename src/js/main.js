@@ -35,6 +35,7 @@ class App {
     this.selectedCity = null;
     this.coords = null;
     this.selectedYear = 2026;
+    this.selectedCountryTimezone = null;
     this.updateDateTime();
     setInterval(this.updateDateTime, 60000);
   }
@@ -408,6 +409,8 @@ class App {
       }
       const data = JSON.parse(text);
       this.countryData = data[0];
+      this.selectedCountryTimezone = this.countryData.timezones[0];
+      this.updateCountryClock();
       this.coords = this.countryData.latlng;
       this.selectedCity = this.countryData.capital[0];
       this.selectedCountryCurrency = Object.keys(
@@ -489,6 +492,9 @@ class App {
       // Hide the country card container
 
       countryInfoPlaeHolder.classList.remove("hidden");
+
+      clearInterval(this.countryClockInterval);
+      this.selectedCountryTimezone = null;
     });
   };
   exploreBtnEventListeners = () => {
@@ -1280,6 +1286,38 @@ class App {
 
     // Display plans
     this.displayMyPlans();
+  };
+
+  updateCountryClock = () => {
+    if (!this.selectedCountryTimezone) return;
+
+    const timeValueEle = document.querySelector("#country-local-time");
+    const timeZoneEle = document.querySelector(".local-time-zone");
+
+    if (this.countryClockInterval) clearInterval(this.countryClockInterval);
+
+    const tick = () => {
+      const now = new Date();
+
+      const offsetPart = this.selectedCountryTimezone.replace("UTC", "");
+      const [hours, minutes] = offsetPart.split(":").map(Number);
+
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const targetTime = new Date(
+        utc + 3600000 * hours + 60000 * (hours < 0 ? -minutes : minutes),
+      );
+
+      timeValueEle.textContent = targetTime.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+      timeZoneEle.textContent = this.selectedCountryTimezone;
+    };
+
+    tick();
+    this.countryClockInterval = setInterval(tick, 1000);
   };
 
   displayMyPlans = (filter = "all") => {
