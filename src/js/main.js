@@ -1,12 +1,19 @@
 class App {
-  constructor(baseURL = "https://restcountries.com/v3.1/") {
-    this.baseURL = baseURL;
+  constructor() {
+    this.baseURL = "https://restcountries.com/v3.1/";
     this.countryDataEndpoint = "alpha/";
     this.allCountriesEndpoint = "all";
     this.weatherCastEndPoint = `https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.006&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`;
     this.optionsParams = {
       allCountriesEndPointParams: "?fields=name,cca2",
     };
+    // Inside constructor
+    this.currencyAPIKey = "058a72e450aee0cf3afa55ea";
+    this.currencyBaseURL = `https://v6.exchangerate-api.com/v6/${this.currencyAPIKey}/latest/`;
+    this.currencyData = {};
+    this.selectedCountryCurrency = null;
+    this.populateCurrencySelectors();
+    this.initCurrencyEventListeners();
     this.countryData = [];
     this.weatherData = [];
     this.holidayData = [];
@@ -29,6 +36,94 @@ class App {
     this.coords = null;
     this.selectedYear = 2026;
   }
+  fetchCurrencyRates = async (baseCode = "USD") => {
+    try {
+      const response = await fetch(`${this.currencyBaseURL}${baseCode}`);
+      if (!response.ok) throw new Error("Currency API error");
+
+      const data = await response.json();
+      this.currencyData = data.conversion_rates;
+      const countryCurrencyCode = Object.keys(this.countryData.currencies)[0];
+      this.selectedCountryCurrency = countryCurrencyCode;
+      return data.conversion_rates;
+    } catch (error) {
+      console.error("Rates fetch failed:", error.message);
+    }
+  };
+  handleConversion = async () => {
+    const amount = document.querySelector("#currency-amount").value;
+    const from = document.querySelector("#currency-from").value;
+    const to = document.querySelector("#currency-to").value;
+
+    // Fetch new rates if the "From" currency changed
+    const rates = await this.fetchCurrencyRates(from);
+    const rate = rates[to];
+    const result = (amount * rate).toFixed(2);
+
+    // Update UI Result Card
+    const resultContainer = document.querySelector("#currency-result");
+    resultContainer.querySelector(".conversion-from .amount").textContent =
+      amount;
+    resultContainer.querySelector(
+      ".conversion-from .currency-code",
+    ).textContent = from;
+    resultContainer.querySelector(".conversion-to .amount").textContent =
+      result;
+    resultContainer.querySelector(".conversion-to .currency-code").textContent =
+      to;
+    resultContainer.querySelector(".exchange-rate-info p").textContent =
+      `1 ${from} = ${rate.toFixed(4)} ${to}`;
+  };
+  initCurrencyEventListeners = () => {
+    const convertBtn = document.querySelector("#convert-btn");
+    const swapBtn = document.querySelector("#swap-currencies-btn");
+
+    document
+      .querySelector("#currency-from")
+      .addEventListener("change", () => this.handleConversion());
+    document
+      .querySelector("#currency-to")
+      .addEventListener("change", () => this.handleConversion());
+    convertBtn.addEventListener("click", () => this.handleConversion());
+
+    swapBtn.addEventListener("click", () => {
+      const fromEle = document.querySelector("#currency-from");
+      const toEle = document.querySelector("#currency-to");
+      const temp = fromEle.value;
+      fromEle.value = toEle.value;
+      toEle.value = temp;
+      this.handleConversion(); // Re-calculate after swap
+    });
+  };
+  populateCurrencySelectors = async () => {
+    try {
+      // We use the 'codes' endpoint to get all supported currencies
+      const response = await fetch(
+        `https://v6.exchangerate-api.com/v6/${this.currencyAPIKey}/codes`,
+      );
+      if (!response.ok) throw new Error("Could not fetch currency codes");
+
+      const data = await response.json();
+      const fromSelect = document.querySelector("#currency-from");
+      const toSelect = document.querySelector("#currency-to");
+
+      // Clear existing static options
+      fromSelect.innerHTML = "";
+      toSelect.innerHTML = "";
+
+      data.supported_codes.forEach(([code, name]) => {
+        const option = `<option value="${code}">${code} - ${name}</option>`;
+        fromSelect.insertAdjacentHTML("beforeend", option);
+        toSelect.insertAdjacentHTML("beforeend", option);
+      });
+
+      // Set defaults after population
+      fromSelect.value = "USD";
+      toSelect.value = "EGP";
+    } catch (error) {
+      console.error("Failed to load selectors:", error.message);
+    }
+  };
   fetchCountriesAvailable = async () => {
     try {
       const response = await fetch(
@@ -228,6 +323,18 @@ class App {
       this.countryData = data[0];
       this.coords = this.countryData.latlng;
       this.selectedCity = this.countryData.capital[0];
+      this.selectedCountryCurrency = Object.keys(
+        this.countryData.currencies,
+      )[0];
+      const countryCurrency = Object.keys(this.countryData.currencies)[0];
+      const fromSelect = document.querySelector("#currency-from");
+      if (fromSelect && countryCurrency) {
+        fromSelect.value = countryCurrency;
+
+        if (typeof this.handleConversion === "function") {
+          this.handleConversion();
+        }
+      }
       this.displayCountryInfo(this.countryData);
       document.querySelector("#global-city").innerHTML =
         `<option value='${this.selectedCity}' selected><i class="fa-solid fa-city"></i> ${this.selectedCity}</option>`;
@@ -978,6 +1085,8 @@ class App {
       }
     } else if (this.selectedCountry && viewName === "long-weekends") {
       this.fetchLongWeekendsData();
+    } else if (viewName === "currency") {
+      this.handleConversion();
     }
   };
 
