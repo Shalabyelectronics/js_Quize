@@ -13,10 +13,17 @@ class App {
     this.eventsData = [];
     this.sunTimesData = {};
     this.longWeekendsData = [];
+    // Load existing plans from memory or start with an empty array
+    this.savedPlans =
+      JSON.parse(localStorage.getItem("wanderlust_plans")) || [];
     this.selectCountrytEventListeners();
     this.clearSelectionEventListeners();
     this.exploreBtnEventListeners();
+    this.initRounting();
+    this.setupMyPlansListeners();
+    this.attachHeartListeners();
     this.fetchCountriesAvailable();
+    this.updatePlansUI();
     this.selectedCountry = null;
     this.selectedCity = null;
     this.coords = null;
@@ -596,6 +603,16 @@ class App {
       const holidayCard = document.createElement("div");
       holidayCard.classList.add("holiday-card");
       holidayCard.innerHTML = ` <div class="holiday-card-header"> <div class="holiday-date-box"> <span class="day">${day}</span><span class="month">${month}</span> </div> <button class="holiday-action-btn"> <i class="fa-regular fa-heart"></i> </button> </div> <h3>${holiday.name}</h3> <p class="holiday-name">${holiday.localName}</p> <div class="holiday-card-footer"> <span class="holiday-day-badge"> <i class="fa-regular fa-calendar"></i> ${weekday} </span> <span class="holiday-type-badge">${holiday.types.join(", ")}</span> </div> `;
+      const saveBtn = holidayCard.querySelector(".holiday-action-btn");
+      saveBtn.addEventListener("click", () => {
+        this.saveToPlans({
+          id: `holiday-${holiday.date}-${holiday.name}`, // Unique ID
+          type: "holiday",
+          title: holiday.name,
+          date: holiday.date,
+          detail: holiday.localName,
+        });
+      });
       holidayCardsContainer.appendChild(holidayCard);
     });
   };
@@ -963,7 +980,403 @@ class App {
       this.fetchLongWeekendsData();
     }
   };
+
+  saveToPlans = (planData) => {
+    if (!this.savedPlans.some((p) => p.id === planData.id)) {
+      this.savedPlans.push(planData);
+      localStorage.setItem("wanderlust_plans", JSON.stringify(this.savedPlans));
+      this.updatePlansUI();
+      this.showToast(`${planData.title} added to your plans!`, "success");
+    } else {
+      this.showToast("Already in your plans", "info");
+    }
+  };
+
+  removeFromPlans = (planId) => {
+    this.savedPlans = this.savedPlans.filter((p) => p.id !== planId);
+    localStorage.setItem("wanderlust_plans", JSON.stringify(this.savedPlans));
+    this.updatePlansUI();
+    this.showToast("Removed from plans", "success");
+  };
+
+  updatePlansUI = () => {
+    // Update badge count
+    const plansCount = this.savedPlans.length;
+    const plansBadge = document.querySelector("#plans-count");
+    if (plansBadge) {
+      if (plansCount > 0) {
+        plansBadge.textContent = plansCount;
+        plansBadge.classList.remove("hidden");
+      } else {
+        plansBadge.classList.add("hidden");
+      }
+    }
+
+    // Update dashboard stat card
+    const statSaved = document.querySelector("#stat-saved");
+    if (statSaved) {
+      statSaved.textContent = plansCount;
+    }
+
+    // Update filter counts
+    const holidayCount = this.savedPlans.filter(
+      (p) => p.type === "holiday",
+    ).length;
+    const eventCount = this.savedPlans.filter((p) => p.type === "event").length;
+    const lwCount = this.savedPlans.filter(
+      (p) => p.type === "longweekend",
+    ).length;
+
+    const filterAllCount = document.querySelector("#filter-all-count");
+    const filterHolidayCount = document.querySelector("#filter-holiday-count");
+    const filterEventCount = document.querySelector("#filter-event-count");
+    const filterLwCount = document.querySelector("#filter-lw-count");
+
+    if (filterAllCount) filterAllCount.textContent = plansCount;
+    if (filterHolidayCount) filterHolidayCount.textContent = holidayCount;
+    if (filterEventCount) filterEventCount.textContent = eventCount;
+    if (filterLwCount) filterLwCount.textContent = lwCount;
+
+    // Display plans
+    this.displayMyPlans();
+  };
+
+  displayMyPlans = (filter = "all") => {
+    const plansContent = document.querySelector("#plans-content");
+
+    if (!plansContent) return;
+
+    if (this.savedPlans.length === 0) {
+      plansContent.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i class="fa-solid fa-heart-crack"></i>
+          </div>
+          <h3>No Saved Plans Yet</h3>
+          <p>Start exploring and save holidays, events, or long weekends you like!</p>
+          <button class="btn-primary" id="start-exploring-btn">
+            <i class="fa-solid fa-compass"></i> Start Exploring
+          </button>
+        </div>
+      `;
+
+      // Add event listener to start exploring button
+      const startBtn = document.querySelector("#start-exploring-btn");
+      if (startBtn) {
+        startBtn.addEventListener("click", () => {
+          const dashboardLink = document.querySelector(
+            '[data-view="dashboard"]',
+          );
+          if (dashboardLink) dashboardLink.click();
+        });
+      }
+      return;
+    }
+
+    const filteredPlans =
+      filter === "all"
+        ? this.savedPlans
+        : this.savedPlans.filter((p) => p.type === filter);
+
+    plansContent.innerHTML = "";
+
+    filteredPlans.forEach((plan) => {
+      const planCard = document.createElement("div");
+      planCard.classList.add("plan-card");
+      planCard.setAttribute("data-type", plan.type);
+
+      if (plan.type === "holiday") {
+        planCard.innerHTML = `
+          <span class="plan-card-type holiday">Holiday</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
+              <div><i class="fa-solid fa-circle-info"></i>${plan.localName || plan.title}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (plan.type === "event") {
+        planCard.innerHTML = `
+          <span class="plan-card-type event">Event</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
+              <div><i class="fa-solid fa-location-dot"></i>${plan.venue}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (plan.type === "longweekend") {
+        planCard.innerHTML = `
+          <span class="plan-card-type longweekend">Long Weekend</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.dateRange}</div>
+              <div><i class="fa-solid fa-circle-info"></i>${plan.needsBridge ? "Bridge day needed" : "No extra days off needed"}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      plansContent.appendChild(planCard);
+    });
+
+    // Add remove button event listeners
+    document.querySelectorAll(".btn-plan-remove").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const planId = e.currentTarget.getAttribute("data-id");
+        this.removeFromPlans(planId);
+      });
+    });
+  };
+
+  setupMyPlansListeners = () => {
+    // Filter buttons
+    const filterButtons = document.querySelectorAll(".plan-filter");
+    filterButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        filterButtons.forEach((b) => b.classList.remove("active"));
+        e.currentTarget.classList.add("active");
+        const filter = e.currentTarget.getAttribute("data-filter");
+        this.displayMyPlans(filter);
+      });
+    });
+
+    // Clear all button
+    const clearAllBtn = document.querySelector("#clear-all-plans-btn");
+    if (clearAllBtn) {
+      clearAllBtn.addEventListener("click", () => {
+        this.showConfirmModal(
+          "Clear All Plans?",
+          "Are you sure you want to clear all saved plans? This action cannot be undone.",
+          () => {
+            this.savedPlans = [];
+            localStorage.setItem(
+              "wanderlust_plans",
+              JSON.stringify(this.savedPlans),
+            );
+            this.updatePlansUI();
+            this.showToast("All plans cleared", "success");
+          },
+        );
+      });
+    }
+  };
+
+  showConfirmModal = (title, message, onConfirm) => {
+    const modalOverlay = document.querySelector("#modal-overlay");
+    const modalBody = document.querySelector("#modal-body");
+    const modalCloseBtn = document.querySelector("#modal-close-btn");
+
+    if (!modalOverlay || !modalBody) return;
+
+    modalBody.innerHTML = `
+      <div style="text-align: center;">
+        <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--danger-100) 0%, var(--danger-200) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 36px; color: var(--danger-600);"></i>
+        </div>
+        <h2 style="font-size: 24px; font-weight: 700; color: var(--slate-800); margin-bottom: 12px;">${title}</h2>
+        <p style="color: var(--slate-600); margin-bottom: 32px; font-size: 15px;">${message}</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="modal-cancel-btn" class="btn-outline" style="padding: 12px 24px;">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button id="modal-confirm-btn" class="btn-danger-outline" style="padding: 12px 24px;">
+            <i class="fa-solid fa-trash"></i> Clear All
+          </button>
+        </div>
+      </div>
+    `;
+
+    modalOverlay.classList.remove("hidden");
+
+    const closeModal = () => {
+      modalOverlay.classList.add("hidden");
+    };
+
+    // Cancel button
+    const cancelBtn = modalBody.querySelector("#modal-cancel-btn");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", closeModal);
+    }
+
+    // Confirm button
+    const confirmBtn = modalBody.querySelector("#modal-confirm-btn");
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", () => {
+        onConfirm();
+        closeModal();
+      });
+    }
+
+    // Close button
+    if (modalCloseBtn) {
+      modalCloseBtn.onclick = closeModal;
+    }
+
+    // Click outside to close
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+  };
+
+  attachHeartListeners = () => {
+    // Holiday heart buttons
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".holiday-action-btn")) {
+        const holidayCard = e.target.closest(".holiday-card");
+        if (holidayCard) {
+          const title = holidayCard.querySelector("h3").textContent;
+          const date = holidayCard
+            .querySelector(".holiday-day-badge")
+            .textContent.trim();
+          const localName =
+            holidayCard.querySelector(".holiday-name")?.textContent || title;
+
+          const planData = {
+            id: `holiday-${title}-${date}`,
+            type: "holiday",
+            title: title,
+            date: date,
+            localName: localName,
+            savedAt: new Date().toISOString(),
+          };
+
+          this.saveToPlans(planData);
+          e.target.closest(".holiday-action-btn").innerHTML =
+            '<i class="fa-solid fa-heart"></i>';
+        }
+      }
+
+      // Event heart buttons
+      if (
+        e.target.closest(".event-card-save") ||
+        e.target.closest(".btn-event")
+      ) {
+        const eventCard = e.target.closest(".event-card");
+        if (eventCard) {
+          const title = eventCard.querySelector("h3").textContent;
+          const dateInfo =
+            eventCard
+              .querySelector(".event-card-info div:first-child")
+              ?.textContent.trim() || "";
+          const venueInfo =
+            eventCard
+              .querySelector(".event-card-info div:last-child")
+              ?.textContent.trim() || "";
+          const ticketLink =
+            eventCard.querySelector(".btn-buy-ticket")?.getAttribute("href") ||
+            "";
+
+          const planData = {
+            id: `event-${title}-${Date.now()}`,
+            type: "event",
+            title: title,
+            date: dateInfo,
+            venue: venueInfo,
+            url: ticketLink,
+            savedAt: new Date().toISOString(),
+          };
+
+          this.saveToPlans(planData);
+          const heartBtn =
+            eventCard.querySelector(".event-card-save") ||
+            eventCard.querySelector(".btn-event");
+          if (heartBtn) {
+            heartBtn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+          }
+        }
+      }
+
+      // Long weekend heart buttons
+      if (e.target.closest(".lw-card .holiday-action-btn")) {
+        const lwCard = e.target.closest(".lw-card");
+        if (lwCard) {
+          const title = lwCard.querySelector("h3").textContent;
+          const dateRange = lwCard
+            .querySelector(".lw-dates")
+            .textContent.trim();
+          const dayCount = lwCard.querySelector(".lw-badge").textContent.trim();
+
+          const planData = {
+            id: `lw-${title}-${dateRange}`,
+            type: "longweekend",
+            title: title,
+            dateRange: dateRange,
+            dayCount: dayCount,
+            savedAt: new Date().toISOString(),
+          };
+
+          this.saveToPlans(planData);
+          e.target.closest(".holiday-action-btn").innerHTML =
+            '<i class="fa-solid fa-heart"></i>';
+        }
+      }
+    });
+  };
+
+  showToast = (message, type = "info") => {
+    const toastContainer = document.querySelector("#toast-container");
+    if (!toastContainer) return;
+
+    const toast = document.createElement("div");
+    toast.classList.add("toast", `toast-${type}`);
+    toast.innerHTML = `
+      <i class="fa-solid fa-${type === "success" ? "check-circle" : type === "error" ? "exclamation-circle" : "info-circle"}"></i>
+      <span>${message}</span>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("show");
+    }, 10);
+
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
+    }, 3000);
+  };
+
+  showLoader = (text = "Loading...") => {
+    const loadingOverlay = document.querySelector("#loading-overlay");
+    const loadingText = document.querySelector("#loading-text");
+
+    if (loadingOverlay) {
+      if (loadingText) {
+        loadingText.textContent = text;
+      }
+      loadingOverlay.classList.remove("hidden");
+    }
+  };
+
+  hideLoader = () => {
+    const loadingOverlay = document.querySelector("#loading-overlay");
+    if (loadingOverlay) {
+      loadingOverlay.classList.add("hidden");
+    }
+  };
 }
 
 const initApp = new App();
-initApp.initRounting();
