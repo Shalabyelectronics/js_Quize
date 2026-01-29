@@ -10,7 +10,9 @@ class App {
     this.countryData = [];
     this.weatherData = [];
     this.holidayData = [];
-    this.initEventListeners();
+    this.selectCountrytEventListeners();
+    this.clearSelectionEventListeners();
+    this.exploreBtnEventListeners();
     this.fetchCountriesAvailable();
     this.selectedCountry = null;
     this.selectedCity = null;
@@ -22,12 +24,12 @@ class App {
       const response = await fetch(
         `${this.baseURL + this.allCountriesEndpoint + this.optionsParams.allCountriesEndPointParams}`,
       );
-      if (!response.ok){
-        throw new Error(`API error: ${response.status}`)
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
       const text = await response.text();
-      if(!text){
-        throw new Error("Empty response from Available countries API")
+      if (!text) {
+        throw new Error("Empty response from Available countries API");
       }
       const data = JSON.parse(text);
       const selectCountryEle = document.querySelector("#global-country");
@@ -105,25 +107,90 @@ class App {
       this.coords = this.countryData.latlng;
       this.selectedCity = this.countryData.capital[0];
       this.displayCountryInfo(this.countryData);
+      document.querySelector("#global-city").innerHTML =
+        `<option value='${this.selectedCity}' selected><i class="fa-solid fa-city"></i> ${this.selectedCity}</option>`;
+      // Update the flag in destination component
+      const countryFlagInDestinationComponent = document.querySelector(
+        "#selected-country-flag",
+      );
+
+      countryFlagInDestinationComponent.setAttribute(
+        "src",
+        `${this.countryData.flags.png}`,
+      );
+      countryFlagInDestinationComponent.setAttribute(
+        "alt",
+        `${this.countryData.name.common} flag`,
+      );
+      // update the country name
+      document.querySelector("#selected-country-name").textContent =
+        this.countryData.name.common;
+      // update the city name
+      document.querySelector("#selected-city-name").textContent =
+        `• ${this.selectedCity}`;
+      // Show the selected destination component
+      document
+        .querySelector("#selected-destination")
+        .classList.remove("hidden");
+      console.log(this.countryData);
     } catch (error) {
       console.log("Country fetch faild:", error.message);
       document.querySelector("#dashboard-country-info-section").innerHTML =
         `<div class="country-error">No Country data available for ${this.selectedCountry} in ${this.selectedYear}.</div>`;
     }
   };
-  initEventListeners = () => {
-    const countryCardContainer = document.querySelector(
-      "#dashboard-country-info-section",
-    );
-    countryCardContainer.classList.add("hide");
+  selectCountrytEventListeners = () => {
     const selectCountryEle = document.querySelector("#global-country");
     selectCountryEle.addEventListener("change", (e) => {
       if (e.currentTarget.value) {
-        countryCardContainer.classList.remove("hide");
         this.fetchCountryData(e.currentTarget.value);
         this.selectedCountry = e.currentTarget.value;
-      } else {
-        countryCardContainer.classList.add("hide");
+      }
+    });
+  };
+  clearSelectionEventListeners = () => {
+    const closeBTN = document.querySelector("#clear-selection-btn");
+    closeBTN.addEventListener("click", () => {
+      const countryInfoGroup = document.querySelector(
+        ".dashboard-country-info-group",
+      );
+      const countryInfoPlaeHolder = document.querySelector(
+        ".country-info-placeholder",
+      );
+      const globalCountrySelection = document.querySelector("#global-country");
+      globalCountrySelection.value = "";
+      const globalCitySelection = document.querySelector("#global-city");
+      globalCitySelection.innerHTML = `<option value='' selected disabled><i class="fa-solid fa-city"></i> Select a City</option>`;
+      // Hide the destination component
+      document.querySelector("#selected-destination").classList.add("hidden");
+      countryInfoGroup.classList.add("hidden");
+      // Hide the country card container
+
+      countryInfoPlaeHolder.classList.remove("hidden");
+    });
+  };
+  exploreBtnEventListeners = () => {
+    const exploreBTN = document.querySelector("#global-search-btn");
+    exploreBTN.addEventListener("click", () => {
+      const countryInfoGroup = document.querySelector(
+        ".dashboard-country-info-group",
+      );
+      const countryInfoPlaeHolder = document.querySelector(
+        ".country-info-placeholder",
+      );
+      if (this.selectedCountry) {
+        this.selectedCity = document.querySelector("#global-city").value;
+        this.selectedYear = document.querySelector("#global-year").value;
+        console.log(this.selectedCity, this.selectedYear);
+        countryInfoGroup.classList.remove("hidden");
+        countryInfoPlaeHolder.classList.add("hidden");
+        document
+          .querySelectorAll(".selection-year")
+          .forEach((el) => (el.textContent = this.selectedYear));
+
+        document
+          .querySelectorAll(".selection-city")
+          .forEach((el) => (el.textContent = " • " + this.selectedCity));
       }
     });
   };
@@ -196,8 +263,11 @@ class App {
           (border) => `<span class="extra-tag border-tag">${border}</span>`,
         );
         bordersContainer.innerHTML = [...bordersElements].join("");
-        // console.log(bordersElements);
       }
+      // Map link
+      document
+        .querySelector(".btn-map-link")
+        .setAttribute("href", `${countryData.maps.googleMaps}`);
     }
     // console.log(countryExtraContainer);
     // console.log(countryExtraData);
@@ -455,4 +525,3 @@ class App {
 
 const initApp = new App();
 initApp.initRounting();
-window.history.replaceState({}, "", "/");
