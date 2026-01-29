@@ -7,7 +7,7 @@ class App {
     this.optionsParams = {
       allCountriesEndPointParams: "?fields=name,cca2",
     };
-    // Inside constructor
+
     this.currencyAPIKey = "058a72e450aee0cf3afa55ea";
     this.currencyBaseURL = `https://v6.exchangerate-api.com/v6/${this.currencyAPIKey}/latest/`;
     this.currencyData = {};
@@ -20,7 +20,7 @@ class App {
     this.eventsData = [];
     this.sunTimesData = {};
     this.longWeekendsData = [];
-    // Load existing plans from memory or start with an empty array
+
     this.savedPlans =
       JSON.parse(localStorage.getItem("wanderlust_plans")) || [];
     this.selectCountrytEventListeners();
@@ -35,6 +35,8 @@ class App {
     this.selectedCity = null;
     this.coords = null;
     this.selectedYear = 2026;
+    this.updateDateTime();
+    setInterval(this.updateDateTime, 60000);
   }
   fetchCurrencyRates = async (baseCode = "USD") => {
     try {
@@ -1615,6 +1617,21 @@ class App {
     if (loadingOverlay) {
       loadingOverlay.classList.add("hidden");
     }
+  };
+  updateDateTime = () => {
+    const dateTimeSpan = document.querySelector("#current-datetime");
+
+    const now = new Date();
+    const options = {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    };
+
+    dateTimeSpan.textContent = now.toLocaleString("en-US", options);
   };
 }
 
