@@ -10,6 +10,9 @@ class App {
     this.countryData = [];
     this.weatherData = [];
     this.holidayData = [];
+    this.eventsData = [];
+    this.sunTimesData = {};
+    this.longWeekendsData = [];
     this.selectCountrytEventListeners();
     this.clearSelectionEventListeners();
     this.exploreBtnEventListeners();
@@ -69,6 +72,118 @@ class App {
     `;
     }
   };
+
+  fetchEventsData = async () => {
+    try {
+      const apiKey = "VwECw2OiAzxVzIqnwmKJUG41FbeXJk1y";
+      const city = this.selectedCity || "New York";
+      const countryCode = this.selectedCountry || "US";
+
+      const response = await fetch(
+        `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${apiKey}&city=${encodeURIComponent(city)}&countryCode=${countryCode}&size=20`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from Events API");
+      }
+
+      const data = JSON.parse(text);
+      this.eventsData = data._embedded?.events || [];
+      this.displayEventsInfo(this.eventsData);
+    } catch (error) {
+      console.error("Events fetch failed:", error.message);
+      document.querySelector("#events-content").innerHTML = `
+      <div class="event-error" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+        <i class="fa-solid fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+        <p>No events available for ${city}, ${countryCode}.</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try selecting a different city or country.</p>
+      </div>
+    `;
+    }
+  };
+
+  fetchSunTimesData = async () => {
+    try {
+      if (!this.coords) {
+        throw new Error("No coordinates available");
+      }
+
+      const lat = this.coords[0];
+      const lng = this.coords[1];
+      const today = new Date();
+      const dateStr = today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+
+      const response = await fetch(
+        `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${dateStr}&formatted=0`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from Sunrise-Sunset API");
+      }
+
+      const data = JSON.parse(text);
+      if (data.status !== "OK") {
+        throw new Error("API returned error status");
+      }
+
+      this.sunTimesData = data.results;
+      this.displaySunTimesInfo(this.sunTimesData);
+    } catch (error) {
+      console.error("Sun times fetch failed:", error.message);
+      document.querySelector("#sun-times-content").innerHTML = `
+      <div class="sun-error" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+        <i class="fa-solid fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+        <p>Unable to load sun times data for this location.</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Please select a country to view sun times.</p>
+      </div>
+    `;
+    }
+  };
+
+  fetchLongWeekendsData = async () => {
+    try {
+      if (!this.selectedCountry) {
+        throw new Error("No country selected");
+      }
+
+      const response = await fetch(
+        `https://date.nager.at/api/v3/LongWeekend/${this.selectedYear}/${this.selectedCountry}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Empty response from Long Weekend API");
+      }
+
+      const data = JSON.parse(text);
+      this.longWeekendsData = data;
+      this.displayLongWeekendsInfo(this.longWeekendsData);
+    } catch (error) {
+      console.error("Long weekends fetch failed:", error.message);
+      document.querySelector("#lw-content").innerHTML = `
+      <div class="lw-error" style="padding: 2rem; text-align: center; color: var(--text-secondary); grid-column: 1 / -1;">
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+        <p>No long weekends data available for ${this.selectedCountry} in ${this.selectedYear}.</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try selecting a different country.</p>
+      </div>
+    `;
+    }
+  };
+
   fetchWeatherData = async () => {
     try {
       const response = await fetch(
@@ -484,6 +599,280 @@ class App {
       holidayCardsContainer.appendChild(holidayCard);
     });
   };
+
+  displayEventsInfo = (eventsData) => {
+    const eventsContainer = document.querySelector("#events-content");
+    eventsContainer.innerHTML = "";
+
+    if (!eventsData || eventsData.length === 0) {
+      eventsContainer.innerHTML = `
+        <div class="event-error" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+          <p>No events found for this location.</p>
+        </div>
+      `;
+      return;
+    }
+
+    eventsData.forEach((event) => {
+      const eventDate = new Date(event.dates.start.localDate);
+      const eventTime = event.dates.start.localTime || "Time TBA";
+      const dateFormatted = eventDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      const eventImage =
+        event.images?.[0]?.url ||
+        "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=200&fit=crop";
+      const eventCategory =
+        event.classifications?.[0]?.segment?.name || "Event";
+      const eventName = event.name;
+      const venueName = event._embedded?.venues?.[0]?.name || "Venue TBA";
+      const venueCity =
+        event._embedded?.venues?.[0]?.city?.name || this.selectedCity || "";
+      const eventUrl = event.url || "#";
+
+      const eventCard = document.createElement("div");
+      eventCard.classList.add("event-card");
+      eventCard.innerHTML = `
+        <div class="event-card-image">
+          <img
+            src="${eventImage}"
+            alt="${eventName}"
+            onerror="this.src='https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=200&fit=crop'"
+          />
+          <span class="event-card-category">${eventCategory}</span>
+          <button class="event-card-save">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+        </div>
+        <div class="event-card-body">
+          <h3>${eventName}</h3>
+          <div class="event-card-info">
+            <div>
+              <i class="fa-regular fa-calendar"></i>${dateFormatted} at ${eventTime}
+            </div>
+            <div>
+              <i class="fa-solid fa-location-dot"></i>${venueName}, ${venueCity}
+            </div>
+          </div>
+          <div class="event-card-footer">
+            <button class="btn-event">
+              <i class="fa-regular fa-heart"></i> Save
+            </button>
+            <a href="${eventUrl}" target="_blank" class="btn-buy-ticket">
+              <i class="fa-solid fa-ticket"></i> Buy Tickets
+            </a>
+          </div>
+        </div>
+      `;
+      eventsContainer.appendChild(eventCard);
+    });
+  };
+
+  displaySunTimesInfo = (sunData) => {
+    const sunTimesContainer = document.querySelector("#sun-times-content");
+
+    // Helper function to format time from ISO string to local time
+    const formatTime = (isoString) => {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
+    // Helper function to calculate time difference in hours and minutes
+    const calculateDuration = (start, end) => {
+      const startTime = new Date(start);
+      const endTime = new Date(end);
+      const diffMs = endTime - startTime;
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours}h ${minutes}m`;
+    };
+
+    // Calculate day length
+    const dayLength = calculateDuration(sunData.sunrise, sunData.sunset);
+    const nightLength = calculateDuration(sunData.sunset, sunData.sunrise);
+
+    // Calculate percentage of daylight
+    const dayLengthMs = new Date(sunData.sunset) - new Date(sunData.sunrise);
+    const dayPercentage = ((dayLengthMs / (1000 * 60 * 60 * 24)) * 100).toFixed(
+      1,
+    );
+
+    // Get current date
+    const today = new Date();
+    const dateFormatted = today.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    const dayOfWeek = today.toLocaleDateString("en-US", { weekday: "long" });
+
+    sunTimesContainer.innerHTML = `
+      <div class="sun-main-card">
+        <div class="sun-main-header">
+          <div class="sun-location">
+            <h2><i class="fa-solid fa-location-dot"></i> ${this.selectedCity || "Selected Location"}</h2>
+            <p>Sun times for your selected location</p>
+          </div>
+          <div class="sun-date-display">
+            <div class="date">${dateFormatted}</div>
+            <div class="day">${dayOfWeek}</div>
+          </div>
+        </div>
+
+        <div class="sun-times-grid">
+          <div class="sun-time-card dawn">
+            <div class="icon"><i class="fa-solid fa-moon"></i></div>
+            <div class="label">Civil Dawn</div>
+            <div class="time">${formatTime(sunData.civil_twilight_begin)}</div>
+            <div class="sub-label">Civil Twilight</div>
+          </div>
+          <div class="sun-time-card sunrise">
+            <div class="icon"><i class="fa-solid fa-sun"></i></div>
+            <div class="label">Sunrise</div>
+            <div class="time">${formatTime(sunData.sunrise)}</div>
+            <div class="sub-label">Golden Hour Start</div>
+          </div>
+          <div class="sun-time-card noon">
+            <div class="icon"><i class="fa-solid fa-sun"></i></div>
+            <div class="label">Solar Noon</div>
+            <div class="time">${formatTime(sunData.solar_noon)}</div>
+            <div class="sub-label">Sun at Highest</div>
+          </div>
+          <div class="sun-time-card sunset">
+            <div class="icon"><i class="fa-solid fa-sun"></i></div>
+            <div class="label">Sunset</div>
+            <div class="time">${formatTime(sunData.sunset)}</div>
+            <div class="sub-label">Golden Hour End</div>
+          </div>
+          <div class="sun-time-card dusk">
+            <div class="icon"><i class="fa-solid fa-moon"></i></div>
+            <div class="label">Civil Dusk</div>
+            <div class="time">${formatTime(sunData.civil_twilight_end)}</div>
+            <div class="sub-label">Civil Twilight</div>
+          </div>
+          <div class="sun-time-card daylight">
+            <div class="icon">
+              <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <div class="label">Day Length</div>
+            <div class="time">${dayLength}</div>
+            <div class="sub-label">Total Daylight</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-length-card">
+        <h3>
+          <i class="fa-solid fa-chart-pie"></i> Daylight Distribution
+        </h3>
+        <div class="day-progress">
+          <div class="day-progress-bar">
+            <div class="day-progress-fill" style="width: ${dayPercentage}%"></div>
+          </div>
+        </div>
+        <div class="day-length-stats">
+          <div class="day-stat">
+            <div class="value">${dayLength}</div>
+            <div class="label">Daylight</div>
+          </div>
+          <div class="day-stat">
+            <div class="value">${dayPercentage}%</div>
+            <div class="label">of 24 Hours</div>
+          </div>
+          <div class="day-stat">
+            <div class="value">${nightLength}</div>
+            <div class="label">Night Time</div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  displayLongWeekendsInfo = (longWeekendsData) => {
+    const lwContainer = document.querySelector("#lw-content");
+    lwContainer.innerHTML = "";
+
+    if (!longWeekendsData || longWeekendsData.length === 0) {
+      lwContainer.innerHTML = `
+        <div class="lw-error" style="padding: 2rem; text-align: center; color: var(--text-secondary); grid-column: 1 / -1;">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+          <p>No long weekends found for ${this.selectedCountry} in ${this.selectedYear}.</p>
+        </div>
+      `;
+      return;
+    }
+
+    longWeekendsData.forEach((lw, index) => {
+      const startDate = new Date(lw.startDate);
+      const endDate = new Date(lw.endDate);
+
+      const startFormatted = startDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      const endFormatted = endDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      const dayCount = lw.dayCount;
+      const needsBridge = lw.needBridgeDay;
+
+      // Generate visual days representation
+      let daysVisual = "";
+      const currentDate = new Date(startDate);
+      for (let i = 0; i < dayCount; i++) {
+        const dayName = currentDate.toLocaleDateString("en-US", {
+          weekday: "short",
+        });
+        const dayNum = currentDate.getDate();
+        const isWeekend =
+          currentDate.getDay() === 0 || currentDate.getDay() === 6;
+
+        daysVisual += `
+          <div class="lw-day ${isWeekend ? "weekend" : ""}">
+            <span class="name">${dayName}</span><span class="num">${dayNum}</span>
+          </div>
+        `;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const lwCard = document.createElement("div");
+      lwCard.classList.add("lw-card");
+      lwCard.innerHTML = `
+        <div class="lw-card-header">
+          <span class="lw-badge">
+            <i class="fa-solid fa-calendar-days"></i> ${dayCount} Days
+          </span>
+          <button class="holiday-action-btn">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+        </div>
+        <h3>Long Weekend #${index + 1}</h3>
+        <div class="lw-dates">
+          <i class="fa-regular fa-calendar"></i> ${startFormatted} - ${endFormatted}
+        </div>
+        <div class="lw-info-box ${needsBridge ? "warning" : "success"}">
+          <i class="fa-solid fa-${needsBridge ? "info-circle" : "check-circle"}"></i> 
+          ${needsBridge ? "Requires taking a bridge day off" : "No extra days off needed!"}
+        </div>
+        <div class="lw-days-visual">
+          ${daysVisual}
+        </div>
+      `;
+      lwContainer.appendChild(lwCard);
+    });
+  };
+
   initRounting = () => {
     const navItems = document.querySelectorAll(".nav-item");
     navItems.forEach((navItem) =>
@@ -528,10 +917,6 @@ class App {
         title: "Long Weekends",
         subtitle: "Find the perfect long weekends for your getaway",
       },
-      currency: {
-        title: "Currency Exchange",
-        subtitle: "Convert currencies for your travel budget planning",
-      },
       "sun-times": {
         title: "Sunrise & Sunset Times",
         subtitle: "Track daylight hours for your destination",
@@ -568,6 +953,14 @@ class App {
       }
     } else if (this.selectedCountry && viewName === "holidays") {
       this.fetchHolidayData();
+    } else if (viewName === "events") {
+      this.fetchEventsData();
+    } else if (viewName === "sun-times") {
+      if (this.coords) {
+        this.fetchSunTimesData();
+      }
+    } else if (this.selectedCountry && viewName === "long-weekends") {
+      this.fetchLongWeekendsData();
     }
   };
 }
